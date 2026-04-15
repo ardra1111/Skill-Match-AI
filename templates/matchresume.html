@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Skill Match AI</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, sans-serif;
+      color: #1a1a1a;
+      padding: 2.5rem 1.5rem;
+    }
+    .page { max-width: 780px; margin: 0 auto; }
+
+    .header { text-align: center; margin-bottom: 2.5rem; }
+    .logo { display: inline-flex; align-items: center; gap: 10px; margin-bottom: 0.5rem; }
+    .logo-icon { width: 40px; height: 40px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 12px; display: flex; align-items: center; justify-content: center; }
+    .logo-text { font-size: 26px; font-weight: 700; color: #fff; }
+    .subtitle { font-size: 15px; color: rgba(255,255,255,0.6); }
+
+    .card { background: #fff; border-radius: 16px; padding: 1.5rem; margin-bottom: 1rem; box-shadow: 0 4px 24px rgba(0,0,0,0.15); }
+    .section-label { font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 8px; }
+
+    textarea { width: 100%; border: 1.5px solid #e5e7eb; border-radius: 10px; padding: 0.85rem 1rem; font-size: 14px; color: #1a1a1a; background: #f9fafb; resize: vertical; min-height: 130px; outline: none; font-family: inherit; transition: border-color 0.2s, box-shadow 0.2s; }
+    textarea:focus { border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,0.15); background: #fff; }
+
+    input[type=file] { display: none; }
+    .upload-zone { border: 2px dashed #d1d5db; border-radius: 12px; padding: 2.5rem 1rem; text-align: center; background: #f9fafb; cursor: pointer; transition: all 0.2s; }
+    .upload-zone:hover { border-color: #667eea; background: #f0f0ff; }
+    .upload-icon { width: 48px; height: 48px; background: rgba(102,126,234,0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.75rem; }
+    .upload-label { font-size: 14px; font-weight: 500; color: #374151; }
+    .upload-hint { font-size: 12px; color: #9ca3af; margin-top: 4px; }
+
+    .file-list { margin-top: 0.75rem; display: flex; flex-direction: column; gap: 6px; }
+    .file-chip { display: flex; align-items: center; gap: 10px; background: #f0f0ff; border: 1px solid #c7d2fe; border-radius: 8px; padding: 8px 12px; font-size: 13px; color: #374151; }
+    .file-dot { width: 8px; height: 8px; border-radius: 50%; background: #667eea; flex-shrink: 0; }
+    .file-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .file-size { color: #9ca3af; font-size: 12px; flex-shrink: 0; }
+    .count-badge { display: none; font-size: 11px; background: #667eea; color: #fff; border-radius: 20px; padding: 2px 8px; font-weight: 600; }
+
+    .match-btn { width: 100%; padding: 0.9rem; border-radius: 12px; background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; font-size: 16px; font-weight: 600; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; transition: opacity 0.2s, transform 0.1s; margin-top: 1rem; font-family: inherit; }
+    .match-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+    .match-btn:disabled { cursor: not-allowed; opacity: 0.7; transform: none; }
+
+    #overlay { display: none; background: #fff; border-radius: 16px; padding: 2rem 1.5rem; margin-top: 1rem; box-shadow: 0 4px 24px rgba(0,0,0,0.15); }
+    #overlay.visible { display: block; }
+
+    .ov-header { text-align: center; margin-bottom: 1.75rem; }
+    .ov-title { font-size: 15px; font-weight: 700; color: #1a1a1a; margin-bottom: 4px; }
+    .ov-sub { font-size: 12px; color: #9ca3af; }
+
+    .scanner { position: relative; height: 6px; background: #f3f4f6; border-radius: 3px; overflow: hidden; margin-bottom: 1.75rem; }
+    .scanner-bar { position: absolute; top: 0; left: -40%; width: 40%; height: 100%; background: linear-gradient(90deg, transparent, #667eea, #764ba2, transparent); border-radius: 3px; animation: scan 1.4s ease-in-out infinite; }
+    @keyframes scan { 0% { left: -40%; } 100% { left: 100%; } }
+
+    .steps { display: flex; flex-direction: column; gap: 10px; margin-bottom: 1.75rem; }
+    .step { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 10px; background: #f9fafb; border: 1px solid #e5e7eb; transition: all 0.3s; }
+    .step.active { background: #f0f0ff; border-color: #c7d2fe; }
+    .step.done { background: #f0fdf4; border-color: #bbf7d0; }
+    .step-icon { width: 28px; height: 28px; border-radius: 50%; border: 2px solid #e5e7eb; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.3s; }
+    .step.active .step-icon { border-color: #667eea; animation: pulse-ring 1s ease-in-out infinite; }
+    .step.done .step-icon { border-color: #22c55e; background: #22c55e; }
+    @keyframes pulse-ring { 0%, 100% { box-shadow: 0 0 0 0 rgba(102,126,234,0.4); } 50% { box-shadow: 0 0 0 4px rgba(102,126,234,0.1); } }
+    .step-spinner { width: 12px; height: 12px; border: 2px solid #c7d2fe; border-top-color: #667eea; border-radius: 50%; animation: spin 0.7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .step-check { width: 14px; height: 14px; stroke: #fff; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+    .step-idle { width: 10px; height: 10px; border-radius: 50%; background: #d1d5db; }
+    .step-label { flex: 1; font-size: 13px; font-weight: 500; color: #374151; }
+    .step.active .step-label { color: #4338ca; }
+    .step.done .step-label { color: #166534; }
+    .step-val { font-size: 12px; color: #9ca3af; font-family: monospace; transition: all 0.3s; }
+    .step.done .step-val { color: #22c55e; font-weight: 600; }
+
+    .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 1.75rem; }
+    .metric { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 10px 12px; text-align: center; }
+    .metric-val { font-size: 20px; font-weight: 700; color: #1a1a1a; font-variant-numeric: tabular-nums; min-height: 28px; }
+    .metric-val.counting { color: #667eea; }
+    .metric-label { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+
+    .log { background: #0f0c29; border-radius: 10px; padding: 12px 14px; font-family: monospace; font-size: 11px; color: #a78bfa; max-height: 80px; overflow: hidden; line-height: 1.6; }
+    .log-line { opacity: 0; transform: translateY(4px); transition: all 0.25s; }
+    .log-line.show { opacity: 1; transform: none; }
+    .log-cursor { display: inline-block; width: 6px; height: 11px; background: #7c3aed; margin-left: 2px; vertical-align: middle; animation: blink 0.8s step-end infinite; }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+    #result-section { display: none; margin-top: 1rem; }
+    .winner-card { background: linear-gradient(135deg, #d1fae5, #a7f3d0); border: 1.5px solid #6ee7b7; border-radius: 16px; padding: 1.25rem 1.5rem; display: flex; align-items: center; gap: 16px; margin-bottom: 1rem; }
+    .trophy { width: 48px; height: 48px; background: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .winner-label { font-size: 11px; font-weight: 700; color: #065f46; text-transform: uppercase; letter-spacing: 0.08em; }
+    .winner-name { font-size: 18px; font-weight: 700; color: #064e3b; margin-top: 2px; }
+    .results-list { display: flex; flex-direction: column; gap: 8px; }
+    .result-row { display: flex; align-items: center; gap: 12px; padding: 11px 14px; background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; opacity: 0; transform: translateY(8px); transition: all 0.4s; }
+    .result-row.show { opacity: 1; transform: none; }
+    .result-row:first-child { border-color: #c7d2fe; background: #f5f3ff; }
+    .rank { font-size: 12px; font-weight: 700; color: #9ca3af; width: 24px; flex-shrink: 0; }
+    .result-row:first-child .rank { color: #667eea; }
+    .result-name { flex: 1; font-size: 14px; font-weight: 500; color: #374151; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .bar-wrap { width: 110px; height: 7px; background: #e5e7eb; border-radius: 4px; overflow: hidden; flex-shrink: 0; }
+    .bar-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, #667eea, #764ba2); width: 0%; transition: width 0.8s cubic-bezier(0.4,0,0.2,1); }
+    .score-val { font-size: 13px; font-weight: 700; color: #667eea; width: 38px; text-align: right; flex-shrink: 0; }
+    .error-msg { background: #fef2f2; border: 1px solid #fca5a5; border-radius: 10px; padding: 1rem 1.25rem; font-size: 14px; color: #b91c1c; margin-top: 1rem; }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <div class="header">
+    <div class="logo">
+      <div class="logo-icon">
+        <svg width="22" height="22" viewBox="0 0 20 20" fill="none">
+          <path d="M10 2L3 7v6l7 5 7-5V7L10 2z" stroke="#fff" stroke-width="1.5"/>
+          <circle cx="10" cy="10.5" r="2.5" fill="#fff"/>
+        </svg>
+      </div>
+      <span class="logo-text">Skill Match AI</span>
+    </div>
+    <p class="subtitle">Upload resumes and paste a job description to rank candidates by fit</p>
+  </div>
+
+  <div id="form-section">
+    <form id="main-form" enctype="multipart/form-data">
+      <div class="card">
+        <p class="section-label">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#667eea" stroke-width="1.8"><rect x="2" y="2" width="12" height="12" rx="2"/><path d="M5 6h6M5 9h4" stroke-linecap="round"/></svg>
+          Job description
+        </p>
+        <textarea name="job_description" placeholder="Paste the full job description — required skills, responsibilities, and preferences..." required></textarea>
+      </div>
+
+      <div class="card">
+        <p class="section-label">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#667eea" stroke-width="1.8"><rect x="2" y="1" width="12" height="14" rx="2"/><path d="M5 5h6M5 8h6M5 11h3" stroke-linecap="round"/></svg>
+          Resumes
+          <span class="count-badge" id="count-badge">0 files</span>
+        </p>
+        <label for="resume-input">
+          <div class="upload-zone">
+            <div class="upload-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#667eea" stroke-width="1.8">
+                <path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <p class="upload-label">Click to upload or drag and drop</p>
+            <p class="upload-hint">PDF, DOCX, or TXT &nbsp;·&nbsp; Upload at least 5 resumes</p>
+          </div>
+        </label>
+        <input type="file" id="resume-input" name="resumes" multiple accept=".pdf,.docx,.txt" required>
+        <div class="file-list" id="file-list"></div>
+      </div>
+
+      <button type="submit" class="match-btn" id="match-btn">
+        <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="6" cy="6" r="4"/><path d="M10.5 10.5L14 14" stroke-linecap="round"/>
+        </svg>
+        Match Resumes
+      </button>
+    </form>
+  </div>
+
+  <div id="overlay">
+    <div class="ov-header">
+      <div class="ov-title" id="ov-title">Initializing analysis engine...</div>
+      <div class="ov-sub" id="ov-sub">Processing candidate profiles</div>
+    </div>
+    <div class="scanner"><div class="scanner-bar"></div></div>
+    <div class="steps">
+      <div class="step" id="s0"><div class="step-icon"><div class="step-idle"></div></div><span class="step-label">Parsing resume content</span><span class="step-val" id="sv0">—</span></div>
+      <div class="step" id="s1"><div class="step-icon"><div class="step-idle"></div></div><span class="step-label">Building TF-IDF vectors</span><span class="step-val" id="sv1">—</span></div>
+      <div class="step" id="s2"><div class="step-icon"><div class="step-idle"></div></div><span class="step-label">Computing cosine similarity</span><span class="step-val" id="sv2">—</span></div>
+      <div class="step" id="s3"><div class="step-icon"><div class="step-idle"></div></div><span class="step-label">Ranking candidates</span><span class="step-val" id="sv3">—</span></div>
+      <div class="step" id="s4"><div class="step-icon"><div class="step-idle"></div></div><span class="step-label">Generating report</span><span class="step-val" id="sv4">—</span></div>
+    </div>
+    <div class="metrics">
+      <div class="metric"><div class="metric-val" id="m0">0</div><div class="metric-label">Tokens scanned</div></div>
+      <div class="metric"><div class="metric-val" id="m1">0</div><div class="metric-label">Features extracted</div></div>
+      <div class="metric"><div class="metric-val" id="m2">0.00</div><div class="metric-label">Top score</div></div>
+    </div>
+    <div class="log" id="log"></div>
+  </div>
+
+  <div id="result-section"></div>
+
+</div>
+
+<script>
+  const resumeInput = document.getElementById('resume-input');
+  const fileList = document.getElementById('file-list');
+  const badge = document.getElementById('count-badge');
+
+  resumeInput.addEventListener('change', () => {
+    const files = Array.from(resumeInput.files);
+    fileList.innerHTML = '';
+    if (!files.length) { badge.style.display = 'none'; return; }
+    badge.style.display = 'inline';
+    badge.textContent = files.length + ' file' + (files.length !== 1 ? 's' : '');
+    files.forEach(f => {
+      const size = f.size < 1048576 ? Math.round(f.size / 1024) + ' KB' : (f.size / 1048576).toFixed(1) + ' MB';
+      const d = document.createElement('div');
+      d.className = 'file-chip';
+      d.innerHTML = `<div class="file-dot"></div><span class="file-name">${f.name}</span><span class="file-size">${size}</span>`;
+      fileList.appendChild(d);
+    });
+  });
+
+  const logLines = [
+    '> loading nlp pipeline v2.4.1',
+    '> tokenizing documents...',
+    '> building vocabulary index',
+    '> fitting tfidf matrix',
+    '> computing pairwise similarity',
+    '> sorting candidates by score',
+    '> finalizing ranked output',
+    '> report ready'
+  ];
+
+  function setStep(idx, state, val) {
+    const s = document.getElementById('s' + idx);
+    const icon = s.querySelector('.step-icon');
+    s.className = 'step ' + (state === 'active' ? 'active' : state === 'done' ? 'done' : '');
+    if (state === 'active') {
+      icon.innerHTML = '<div class="step-spinner"></div>';
+    } else if (state === 'done') {
+      icon.innerHTML = '<svg class="step-check" viewBox="0 0 14 14"><polyline points="2,7 6,11 12,3"/></svg>';
+      document.getElementById('sv' + idx).textContent = val || 'done';
+    } else {
+      icon.innerHTML = '<div class="step-idle"></div>';
+    }
+  }
+
+  function countUp(id, target, duration, isFloat) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.add('counting');
+    const start = performance.now();
+    function tick(now) {
+      const p = Math.min((now - start) / duration, 1);
+      const ease = 1 - Math.pow(1 - p, 3);
+      const v = target * ease;
+      el.textContent = isFloat ? v.toFixed(2) : Math.round(v).toLocaleString();
+      if (p < 1) requestAnimationFrame(tick);
+      else el.classList.remove('counting');
+    }
+    requestAnimationFrame(tick);
+  }
+
+  function addLog(i) {
+    const log = document.getElementById('log');
+    const line = document.createElement('div');
+    line.className = 'log-line';
+    line.innerHTML = logLines[i] + (i === logLines.length - 1 ? '<span class="log-cursor"></span>' : '');
+    log.appendChild(line);
+    requestAnimationFrame(() => line.classList.add('show'));
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  async function runAnimation(numFiles) {
+    document.getElementById('ov-sub').textContent = 'Processing ' + numFiles + ' candidate profile' + (numFiles !== 1 ? 's' : '');
+    document.getElementById('log').innerHTML = '';
+    [0,1,2,3,4].forEach(i => setStep(i, 'idle', ''));
+    document.getElementById('m0').textContent = '0';
+    document.getElementById('m1').textContent = '0';
+    document.getElementById('m2').textContent = '0.00';
+
+    const ov = document.getElementById('overlay');
+    ov.classList.add('visible');
+
+    addLog(0); await delay(300); addLog(1);
+    setStep(0, 'active');
+    document.getElementById('ov-title').textContent = 'Parsing resume content...';
+    await delay(700);
+    countUp('m0', 8000 + numFiles * 1200, 600);
+    addLog(2);
+    await delay(700);
+    setStep(0, 'done', numFiles + ' files');
+
+    setStep(1, 'active');
+    document.getElementById('ov-title').textContent = 'Building TF-IDF vectors...';
+    addLog(3);
+    await delay(500);
+    countUp('m1', 2800 + numFiles * 200, 500);
+    await delay(700);
+    setStep(1, 'done', (2800 + numFiles * 200).toLocaleString() + ' terms');
+
+    setStep(2, 'active');
+    document.getElementById('ov-title').textContent = 'Computing cosine similarity...';
+    addLog(4);
+    await delay(900);
+    setStep(2, 'done', numFiles + 'x' + numFiles + ' matrix');
+
+    setStep(3, 'active');
+    document.getElementById('ov-title').textContent = 'Ranking candidates...';
+    addLog(5); await delay(300); addLog(6);
+    await delay(700);
+    setStep(3, 'done', numFiles + ' ranked');
+
+    setStep(4, 'active');
+    document.getElementById('ov-title').textContent = 'Generating report...';
+    addLog(7);
+    await delay(500);
+    setStep(4, 'done', 'complete');
+    document.getElementById('ov-title').textContent = 'Analysis complete';
+  }
+
+  function renderResults(data) {
+    const rs = document.getElementById('result-section');
+    rs.innerHTML = '';
+
+    if (data.error) {
+      rs.innerHTML = `<div class="error-msg">${data.error}</div>`;
+      rs.style.display = 'block';
+      return;
+    }
+
+    document.getElementById('ov-sub').textContent = 'Best candidate identified with ' + Math.round(data.similarity_scores[0]) + '% match';
+    countUp('m2', data.similarity_scores[0], 600, true);
+
+    const winnerCard = document.createElement('div');
+    winnerCard.className = 'winner-card';
+    winnerCard.innerHTML = `
+      <div class="trophy">
+        <svg width="24" height="24" viewBox="0 0 20 20" fill="none">
+          <path d="M6 2h8v8a4 4 0 01-8 0V2z" stroke="#059669" stroke-width="1.5"/>
+          <path d="M6 5H3a2 2 0 000 4h3M14 5h3a2 2 0 010 4h-3M8 18h4M10 14v4" stroke="#059669" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div>
+        <p class="winner-label">Best match</p>
+        <p class="winner-name">${data.best_resume}</p>
+      </div>`;
+    rs.appendChild(winnerCard);
+
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.style.padding = '1.25rem';
+    card.innerHTML = '<p style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.08em;margin-bottom:1rem">All candidates ranked</p>';
+    const list = document.createElement('div');
+    list.className = 'results-list';
+
+    data.top_resumes.forEach((name, i) => {
+      const row = document.createElement('div');
+      row.className = 'result-row';
+      const pct = Math.min(data.similarity_scores[i], 100);
+      row.innerHTML = `<span class="rank">#${i+1}</span><span class="result-name">${name}</span><div class="bar-wrap"><div class="bar-fill" id="rbar${i}"></div></div><span class="score-val">${data.similarity_scores[i].toFixed(2)}%</span>`;
+      list.appendChild(row);
+      setTimeout(() => {
+        row.classList.add('show');
+        setTimeout(() => {
+          const bar = document.getElementById('rbar' + i);
+          if (bar) bar.style.width = pct + '%';
+        }, 100);
+      }, i * 130);
+    });
+
+    card.appendChild(list);
+    rs.appendChild(card);
+    rs.style.display = 'block';
+  }
+
+  document.getElementById('main-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const btn = document.getElementById('match-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<div style="width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite"></div> Analyzing...';
+
+    document.getElementById('result-section').style.display = 'none';
+    document.getElementById('result-section').innerHTML = '';
+
+    const numFiles = resumeInput.files.length;
+    const formData = new FormData(this);
+
+    const [, fetchResult] = await Promise.all([
+      runAnimation(numFiles),
+      fetch('/matcher', { method: 'POST', body: formData }).then(r => r.json())
+    ]);
+
+    await delay(400);
+    document.getElementById('overlay').classList.remove('visible');
+    document.getElementById('overlay').style.display = 'none';
+
+    renderResults(fetchResult);
+
+    btn.disabled = false;
+    btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="4"/><path d="M10.5 10.5L14 14" stroke-linecap="round"/></svg> Match Again';
+  });
+</script>
+</body>
+</html>
